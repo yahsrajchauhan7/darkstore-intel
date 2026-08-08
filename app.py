@@ -11,7 +11,10 @@ Run locally:
     streamlit run app.py
 """
 
+
+
 import os
+import sqlite3
 
 import pandas as pd
 import plotly.express as px
@@ -31,15 +34,21 @@ st.set_page_config(page_title="Dark-Store Intelligence",
 
 @st.cache_data
 def load_data() -> pd.DataFrame:
-    """Load orders.csv, generating it first if it doesn't exist."""
-    if not os.path.exists("orders.csv"):
-        generate().to_csv("orders.csv", index=False)
-    df = pd.read_csv("orders.csv", parse_dates=["timestamp"])
+    """Load orders from SQLite, generating the database if it doesn't exist."""
+    if not os.path.exists("orders.db"):
+        with sqlite3.connect("orders.db") as conn:
+            generate().to_sql("orders", conn, if_exists="replace", index=False)
+    with sqlite3.connect("orders.db") as conn:
+        df = pd.read_sql(
+            "SELECT order_id, timestamp, items, category, utr_minutes, "
+            "delivery_minutes, click_to_door_minutes, inf_flag, on_time "
+            "FROM orders",
+            conn, parse_dates=["timestamp"],
+        )
     df["date"] = df["timestamp"].dt.normalize()
     df["hour"] = df["timestamp"].dt.hour
     df["weekday"] = df["timestamp"].dt.day_name()
     return df
-
 
 df = load_data()
 

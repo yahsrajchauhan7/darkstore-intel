@@ -10,6 +10,8 @@ of where item-not-found (INF) defects actually cluster.
 Run:  python data_generator.py   -> creates orders.csv (~120 days of orders)
 """
 
+import sqlite3
+
 import numpy as np
 import pandas as pd
 
@@ -117,7 +119,10 @@ def generate() -> pd.DataFrame:
 if __name__ == "__main__":
     df = generate()
     df.to_csv("orders.csv", index=False)
-    print(f"Generated {len(df):,} orders across {DAYS} days -> orders.csv")
+    # Also store in SQLite — the dashboard queries this table with SQL.
+    with sqlite3.connect("orders.db") as conn:
+        df.to_sql("orders", conn, if_exists="replace", index=False)
+    print(f"Generated {len(df):,} orders across {DAYS} days -> orders.csv + orders.db")
     print(f"Avg click-to-door: {df['click_to_door_minutes'].mean():.1f} min")
     print(f"On-time rate: {df['on_time'].mean():.1%}")
     print(f"INF rate: {df['inf_flag'].mean():.2%}")
